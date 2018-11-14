@@ -1,0 +1,14 @@
+<library path="lib/libffmpeg_image_transport">
+  <class name="image_transport/ffmpeg_pub" type="ffmpeg_image_transport::FFMPEGPublisher" base_class_type="image_transport::PublisherPlugin">
+    <description>
+      This plugin encodes frame into ffmpeg compressed packets
+    </description>
+  </class>
+
+  <class name="image_transport/ffmpeg_sub" type="ffmpeg_image_transport::FFMPEGSubscriber" base_class_type="image_transport::SubscriberPlugin">
+    <description>
+      This plugin decodes frame from ffmpeg compressed packets
+    </description>
+  </class>
+</library>
+		  

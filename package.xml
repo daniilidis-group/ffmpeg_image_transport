@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>ffmpeg_image_transport</name>
+  <version>1.0.0</version>
+  <description>ffmpeg compressed image transport for ros</description>
+
+  <maintainer email="bernd.pfrommer@gmail.com">Bernd Pfrommer</maintainer>
+  <license>Apache</license>
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>roscpp</depend>
+  <depend>image_transport</depend>
+  <depend>sensor_msgs</depend>
+  <depend>ffmpeg_image_transport_msgs</depend>
+  <depend>opencv</depend>
+  <depend>cv_bridge</depend>
+  <depend>dynamic_reconfigure</depend>
+  <export>
+    <image_transport plugin="${prefix}/ffmpeg_plugins.xml"/>
+  </export>
+
+</package>
