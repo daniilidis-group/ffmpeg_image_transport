@@ -77,16 +77,17 @@ namespace ffmpeg_image_transport {
       return (codecContext_ != NULL);
     }
     bool initialize(const sensor_msgs::Image &msg,
-                    boost::function<void(const FFMPEGPacketConstPtr &pkt)> callback);
+                    boost::function<void(const FFMPEGPacketConstPtr &)> c);
     void reset();
     // encode image
     void encodeImage(const sensor_msgs::Image &msg);
     // ------- performance statistics
-    void printTimers() const;
+    void printTimers(const std::string &prefix) const;
     void resetTimers();
   private:
     bool openCodec(int width, int height);
     void closeCodec();
+    int  drainPacket(const std_msgs::Header &hdr, int width, int height);
     // --------- variables
     mutable std::recursive_mutex mutex_;
     boost::function<void(const FFMPEGPacketConstPtr &pkt)> callback_;
@@ -98,7 +99,7 @@ namespace ffmpeg_image_transport {
     int               fps_{30};
     int               GOPSize_{15};
     int64_t           bitRate_{1000000};
-    int               qmax_{10};
+    int               qmax_{0};
     // libav state
     AVCodecContext    *codecContext_{NULL};
     AVFrame           *frame_{NULL};
@@ -107,6 +108,8 @@ namespace ffmpeg_image_transport {
     PTSMap            ptsToStamp_;
     // performance analysis
     bool              measurePerformance_{true};
+    int64_t           totalInBytes_{0};
+    int64_t           totalOutBytes_{0};
     unsigned int      frameCnt_{0};
     TDiff             tdiffUncompress_;
     TDiff             tdiffEncode_;

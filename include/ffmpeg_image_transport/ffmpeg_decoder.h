@@ -58,7 +58,6 @@ namespace ffmpeg_image_transport {
     std::unordered_map<std::string, std::string> codecMap_;
     AVPacket          packet_;
     // mapping of header
-    int64_t           pts_{0};
     PTSMap            ptsToStamp_;
     // performance analysis
     unsigned int      frameCnt_{0};

@@ -15,6 +15,7 @@ namespace ffmpeg_image_transport {
   FFMPEGDecoder::FFMPEGDecoder() {
     codecMap_["h264_nvenc"] = "h264";
     codecMap_["libx264"]    = "h264";
+    codecMap_["hevc_nvenc"] = "hevc";
   }
 
   FFMPEGDecoder::~FFMPEGDecoder() {
@@ -77,7 +78,7 @@ namespace ffmpeg_image_transport {
       reset();
       return (false);
     }
-    ROS_INFO_STREAM("initialized decoder for " << codecName << " size: " << width << "x" << height);
+    ROS_INFO_STREAM("using decoder " << codecName << ", image size: " << width << "x" << height);
     return (true);
 	}
 
@@ -91,11 +92,9 @@ namespace ffmpeg_image_transport {
     av_init_packet(&packet);
     av_new_packet(&packet, msg->data.size());
     memcpy(packet.data, &msg->data[0], msg->data.size());
-    packet.pts = pts_;
-    packet.dts = pts_;
-    ptsToStamp_[pts_] = msg->header.stamp;
-    pts_++;
-    
+    packet.pts = msg->pts;
+    packet.dts = packet.pts;
+    ptsToStamp_[packet.pts] = msg->header.stamp;
     int gotFrame(0);
     int ret = avcodec_decode_video2(ctx, decodedFrame_, &gotFrame, &packet);
     if (ret > 0 && gotFrame) {

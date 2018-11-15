@@ -26,6 +26,16 @@ namespace ffmpeg_image_transport {
     void configure(EncoderDynConfig& config, int level);
 
   protected:
+    // override to set up reconfigure server
+    virtual void advertiseImpl(ros::NodeHandle &nh,
+                               const std::string &base_topic,
+                               uint32_t queue_size,
+                               const image_transport::SubscriberStatusCallback
+                               &user_connect_cb,
+                               const image_transport::SubscriberStatusCallback
+                               &user_disconnect_cb,
+                               const ros::VoidPtr &tracked_object,
+                               bool latch) override;
     void publish(const sensor_msgs::Image& message,
                  const PublishFn& publish_fn) const override;
     void connectCallback(const ros::SingleSubscriberPublisher &pub) override;
@@ -37,6 +47,7 @@ namespace ffmpeg_image_transport {
     void initConfigServer();
     // variables ---------
     typedef dynamic_reconfigure::Server<EncoderDynConfig> ConfigServer;
+    ros::NodeHandle nh_;
     std::shared_ptr<ConfigServer> configServer_;
     const PublishFn *publishFunction_{NULL};
     FFMPEGEncoder    encoder_;

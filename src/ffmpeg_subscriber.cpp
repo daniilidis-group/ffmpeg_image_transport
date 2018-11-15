@@ -12,6 +12,19 @@ namespace ffmpeg_image_transport {
     (*userCallback_)(img);
   }
 
+  void FFMPEGSubscriber::subscribeImpl(
+    ros::NodeHandle &nh, const std::string &base_topic,
+    uint32_t queue_size, const Callback &callback,
+    const ros::VoidPtr &tracked_object,
+    const image_transport::TransportHints &transport_hints) {
+    // bump queue size a bit to avoid lost packets
+    queue_size = std::max((int)queue_size, 20);
+    FFMPEGSubscriberPlugin::subscribeImpl(nh, base_topic,
+                                          queue_size, callback,
+                                          tracked_object,
+                                          transport_hints);
+  }
+
   void FFMPEGSubscriber::internalCallback(const FFMPEGPacket::ConstPtr& msg,
                                         const Callback& user_cb) {
     if (!decoder_.isInitialized()) {
