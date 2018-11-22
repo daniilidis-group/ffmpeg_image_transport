@@ -7,6 +7,8 @@
 #  FFMPEG_LIBAVCODEC
 #  FFMPEG_LIBAVFORMAT
 #  FFMPEG_LIBAVUTIL
+#  FFMPEG_LIBSWSCALE
+#  FFMPEG_LIBSWRESAMPLE
 #
 #  Copyright (c) 2008 Andreas Schneider <mail@cynapses.org>
 #  Modified for other libraries by Lasse Kärkkäinen <tronic>
@@ -30,6 +32,7 @@ else (FFMPEG_LIBRARIES AND FFMPEG_INCLUDE_DIR)
     pkg_check_modules(_FFMPEG_AVFORMAT libavformat)
     pkg_check_modules(_FFMPEG_AVUTIL libavutil)
     pkg_check_modules(_FFMPEG_SWSCALE libswscale)
+    pkg_check_modules(_FFMPEG_SWRESAMPLE libswresample)
   endif (PKG_CONFIG_FOUND)
 
   find_path(FFMPEG_AVCODEC_INCLUDE_DIR
@@ -63,6 +66,12 @@ else (FFMPEG_LIBRARIES AND FFMPEG_INCLUDE_DIR)
     NO_DEFAULT_PATH
   )
 
+  find_library(FFMPEG_LIBSWRESAMPLE
+    NAMES swresample
+    PATHS $ENV{HOME}/Documents/birds/ffmpeg_build/lib
+    NO_DEFAULT_PATH
+  )
+
   if (FFMPEG_LIBAVCODEC AND FFMPEG_LIBAVFORMAT)
     set(FFMPEG_FOUND TRUE)
   endif()
@@ -72,6 +81,7 @@ else (FFMPEG_LIBRARIES AND FFMPEG_INCLUDE_DIR)
 
     set(FFMPEG_LIBRARIES
       ${FFMPEG_LIBSWSCALE}
+      ${FFMPEG_LIBSWRESAMPLE}
       ${FFMPEG_LIBAVCODEC}
       ${FFMPEG_LIBAVFORMAT}
       ${FFMPEG_LIBAVUTIL}

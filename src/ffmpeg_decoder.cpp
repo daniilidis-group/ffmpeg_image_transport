@@ -90,17 +90,22 @@ namespace ffmpeg_image_transport {
     AVCodecContext *ctx = codecContext_;
     AVPacket packet;
     av_init_packet(&packet);
-    av_new_packet(&packet, msg->data.size());
+    av_new_packet(&packet, msg->data.size()); // will add some padding!
     memcpy(packet.data, &msg->data[0], msg->data.size());
     packet.pts = msg->pts;
     packet.dts = packet.pts;
     ptsToStamp_[packet.pts] = msg->header.stamp;
-    int gotFrame(0);
-    int ret = avcodec_decode_video2(ctx, decodedFrame_, &gotFrame, &packet);
-    if (ret > 0 && gotFrame) {
+    int ret = avcodec_send_packet(ctx, &packet);
+    if (ret != 0) {
+      ROS_WARN_STREAM("send_packet failed for pts: " <<  msg->pts);
+      av_packet_unref(&packet);
+      return (false);
+    }
+    ret = avcodec_receive_frame(ctx, decodedFrame_);
+    if (ret == 0 && decodedFrame_->width != 0) {
       // convert image to something palatable
       if (!swsContext_) {
-        swsContext_ = sws_getContext(ctx->width, ctx->height, (AVPixelFormat)decodedFrame_->format, // src
+        swsContext_ = sws_getContext(ctx->width, ctx->height, (AVPixelFormat)decodedFrame_->format, //src
                                      ctx->width, ctx->height, (AVPixelFormat)colorFrame_->format, // dest
                                      SWS_FAST_BILINEAR, NULL, NULL, NULL);
         if (!swsContext_) {
@@ -134,7 +139,7 @@ namespace ffmpeg_image_transport {
         callback_(image); // deliver callback
       }
     }
-    av_free_packet(&packet);
+    av_packet_unref(&packet);
     return (true);
   }
  
