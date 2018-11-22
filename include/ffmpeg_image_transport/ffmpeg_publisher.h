@@ -12,6 +12,7 @@
 #include <dynamic_reconfigure/server.h>
 
 #include <mutex>
+#include <memory>
 
 namespace ffmpeg_image_transport {
   typedef image_transport::SimplePublisherPlugin<
@@ -47,12 +48,12 @@ namespace ffmpeg_image_transport {
     void initConfigServer();
     // variables ---------
     typedef dynamic_reconfigure::Server<EncoderDynConfig> ConfigServer;
-    ros::NodeHandle nh_;
+    std::shared_ptr<ros::NodeHandle>   nh_;
     std::shared_ptr<ConfigServer> configServer_;
-    const PublishFn *publishFunction_{NULL};
-    FFMPEGEncoder    encoder_;
-    unsigned int     frameCounter_{0};
-    EncoderDynConfig config_;
-    std::recursive_mutex  configMutex_;
+    const PublishFn              *publishFunction_{NULL};
+    FFMPEGEncoder                 encoder_;
+    unsigned int                  frameCounter_{0};
+    EncoderDynConfig              config_;
+    std::recursive_mutex          configMutex_;
   };
 }

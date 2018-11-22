@@ -38,7 +38,7 @@ namespace ffmpeg_image_transport {
     const image_transport::SubscriberStatusCallback  &conn_cb,
     const image_transport::SubscriberStatusCallback  &disconn_cb,
     const ros::VoidPtr &tracked_object, bool latch) {
-    nh_ = nh;
+    nh_.reset(new ros::NodeHandle(nh));
     initConfigServer();
     // make the queue twice the size between keyframes.
     queue_size = std::max((int)queue_size, 2 * config_.gop_size);
@@ -78,7 +78,7 @@ namespace ffmpeg_image_transport {
     Lock lock(me->configMutex_);
     if (me->config_.measure_performance) {
       if (++me->frameCounter_ > (unsigned int)me->config_.performance_interval) {
-        me->encoder_.printTimers(nh_.getNamespace());
+        me->encoder_.printTimers(nh_->getNamespace());
         me->encoder_.resetTimers();
         me->frameCounter_ = 0;
       }
@@ -88,7 +88,7 @@ namespace ffmpeg_image_transport {
   void FFMPEGPublisher::initConfigServer() {
     Lock lock(configMutex_);
     if (!configServer_) {
-      configServer_.reset(new ConfigServer(nh_));
+      configServer_.reset(new ConfigServer(*nh_));
       // this will trigger an immediate callback!
       configServer_->setCallback(boost::bind(&FFMPEGPublisher::configure, this, _1, _2));
     }
