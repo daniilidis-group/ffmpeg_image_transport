@@ -38,7 +38,8 @@ namespace ffmpeg_image_transport {
     const image_transport::SubscriberStatusCallback  &conn_cb,
     const image_transport::SubscriberStatusCallback  &disconn_cb,
     const ros::VoidPtr &tracked_object, bool latch) {
-    nh_.reset(new ros::NodeHandle(nh));
+    const std::string transportTopic = getTopicToAdvertise(base_topic);
+    nh_.reset(new ros::NodeHandle(transportTopic));
     initConfigServer();
     // make the queue twice the size between keyframes.
     queue_size = std::max((int)queue_size, 2 * config_.gop_size);
@@ -69,7 +70,8 @@ namespace ffmpeg_image_transport {
     if (!me->encoder_.isInitialized()) {
       me->initConfigServer();
       me->publishFunction_ = &publish_fn;
-      if (!me->encoder_.initialize(message, boost::bind(&FFMPEGPublisher::packetReady, me, ::_1))) {
+      if (!me->encoder_.initialize(message.width, message.height,
+                  boost::bind(&FFMPEGPublisher::packetReady, me, ::_1))) {
         ROS_ERROR_STREAM("cannot initialize encoder!");
         return;
       }

@@ -39,6 +39,7 @@ namespace ffmpeg_image_transport {
     using FFMPEGPacketConstPtr =
       ffmpeg_image_transport_msgs::FFMPEGPacketConstPtr;
     typedef std::unique_lock<std::recursive_mutex> Lock;
+    typedef boost::function<void(const FFMPEGPacketConstPtr &pkt)> Callback;
   public:
     FFMPEGEncoder();
     ~FFMPEGEncoder();
@@ -76,10 +77,12 @@ namespace ffmpeg_image_transport {
       Lock lock(mutex_);
       return (codecContext_ != NULL);
     }
-    bool initialize(const sensor_msgs::Image &msg,
-                    boost::function<void(const FFMPEGPacketConstPtr &)> c);
+    bool initialize(int width, int height, Callback callback);
+
     void reset();
     // encode image
+    void encodeImage(const cv::Mat &img,
+                     const std_msgs::Header &header, const ros::WallTime &t0);
     void encodeImage(const sensor_msgs::Image &msg);
     // ------- performance statistics
     void printTimers(const std::string &prefix) const;

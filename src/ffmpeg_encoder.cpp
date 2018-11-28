@@ -49,11 +49,11 @@ namespace ffmpeg_image_transport {
     }
   }
 
-  bool FFMPEGEncoder::initialize(const sensor_msgs::Image &msg,
-                                 boost::function<void(const FFMPEGPacketConstPtr &pkt)> callback) {
+  bool FFMPEGEncoder::initialize(int width, int height,
+                                 Callback callback) {
     Lock lock(mutex_);
     callback_ = callback;
-    return (openCodec(msg.width, msg.height));
+    return (openCodec(width, height));
   }
 
 	bool FFMPEGEncoder::openCodec(int width, int height) {
@@ -141,15 +141,26 @@ namespace ffmpeg_image_transport {
 	}
 
   void FFMPEGEncoder::encodeImage(const sensor_msgs::Image &msg) {
-    Lock lock(mutex_);
-    ros::WallTime t0, t1, t2, t3;
+    ros::WallTime t0;
     if (measurePerformance_) { t0 = ros::WallTime::now(); }
-    cv::Mat img = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8)->image;
+    cv::Mat img =
+      cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8)->image;
+    encodeImage(img, msg.header, t0);
+    if (measurePerformance_) {
+      const auto t1 = ros::WallTime::now();
+      tdiffDebayer_.update((t1-t0).toSec());
+    }
+  }
+
+  void FFMPEGEncoder::encodeImage(const cv::Mat &img,
+                                  const std_msgs::Header &header,
+                                  const ros::WallTime &t0) {
+    Lock lock(mutex_);
+    ros::WallTime t1, t2, t3;
     if (measurePerformance_) {
       frameCnt_++;
       t1 = ros::WallTime::now();
       totalInBytes_ += img.cols * img.rows; // raw size!
-      tdiffDebayer_.update((t1-t0).toSec());
     }
 
     const uint8_t *p = img.data;
@@ -162,9 +173,9 @@ namespace ffmpeg_image_transport {
       cv::Mat yuv;
       cv::cvtColor(img, yuv, cv::COLOR_BGR2YUV_I420);
       const uint8_t *p = yuv.data;
-      memcpy(frame_->data[0], p, width * height);
-      memcpy(frame_->data[1], p + width * height, width * height / 4);
-      memcpy(frame_->data[2], p + width * (height + height/4), width * height / 4);
+      memcpy(frame_->data[0], p,  width*height);
+      memcpy(frame_->data[1], p + width*height, width*height / 4);
+      memcpy(frame_->data[2], p + width*(height + height/4), (width*height)/4);
     } else {
       ROS_ERROR_STREAM("cannot convert format bgr8 -> "  << " -> " << codecContext_->pix_fmt);
       return;
@@ -175,7 +186,7 @@ namespace ffmpeg_image_transport {
     }
 
     frame_->pts = pts_++; //
-    ptsToStamp_.insert(PTSMap::value_type(frame_->pts, msg.header.stamp));
+    ptsToStamp_.insert(PTSMap::value_type(frame_->pts, header.stamp));
 
     int ret = avcodec_send_frame(codecContext_, frame_);
     if (measurePerformance_) {
@@ -184,7 +195,7 @@ namespace ffmpeg_image_transport {
     }
     // now drain all packets
     while (ret == 0) {
-      ret = drainPacket(msg.header, width, height);
+      ret = drainPacket(header, width, height);
     }
     if (measurePerformance_) {
       const ros::WallTime t4 = ros::WallTime::now();
