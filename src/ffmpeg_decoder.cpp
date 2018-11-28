@@ -15,7 +15,8 @@ namespace ffmpeg_image_transport {
   FFMPEGDecoder::FFMPEGDecoder() {
     codecMap_["h264_nvenc"] = "h264";
     codecMap_["libx264"]    = "h264";
-    codecMap_["hevc_nvenc"] = "hevc";
+    //codecMap_["hevc_nvenc"] = "hevc";
+    codecMap_["hevc_nvenc"] = "hevc_cuvid";
   }
 
   FFMPEGDecoder::~FFMPEGDecoder() {
@@ -39,7 +40,7 @@ namespace ffmpeg_image_transport {
   }
 
   bool FFMPEGDecoder::initialize(const FFMPEGPacket::ConstPtr& msg,
-                                 boost::function<void(const ImageConstPtr &img)> callback) {
+                                 Callback callback) {
     callback_ = callback;
     const auto it = codecMap_.find(msg->encoding);
     if (it == codecMap_.end()) {
@@ -50,7 +51,8 @@ namespace ffmpeg_image_transport {
     return (initDecoder(msg->img_width, msg->img_height, it->second));
   }
 
-	bool FFMPEGDecoder::initDecoder(int width, int height, const std::string &codecName) {
+	bool FFMPEGDecoder::initDecoder(int width, int height,
+                                  const std::string &codecName) {
     try {
       const AVCodec *codec = avcodec_find_decoder_by_name(codecName.c_str());
       if (!codec) {
@@ -78,11 +80,15 @@ namespace ffmpeg_image_transport {
       reset();
       return (false);
     }
-    ROS_INFO_STREAM("using decoder " << codecName << ", image size: " << width << "x" << height);
+    ROS_INFO_STREAM("using decoder " << codecName);
     return (true);
 	}
 
   bool FFMPEGDecoder::decodePacket(const FFMPEGPacket::ConstPtr &msg) {
+    ros::WallTime t0;
+    if (measurePerformance_) {
+      t0 = ros::WallTime::now();
+    }
     if (msg->encoding != encoding_) {
       ROS_ERROR_STREAM("cannot change encoding on the fly!!!");
       return (false);
@@ -105,9 +111,10 @@ namespace ffmpeg_image_transport {
     if (ret == 0 && decodedFrame_->width != 0) {
       // convert image to something palatable
       if (!swsContext_) {
-        swsContext_ = sws_getContext(ctx->width, ctx->height, (AVPixelFormat)decodedFrame_->format, //src
-                                     ctx->width, ctx->height, (AVPixelFormat)colorFrame_->format, // dest
-                                     SWS_FAST_BILINEAR, NULL, NULL, NULL);
+        swsContext_ = sws_getContext(
+          ctx->width, ctx->height, (AVPixelFormat)decodedFrame_->format, //src
+          ctx->width, ctx->height, (AVPixelFormat)colorFrame_->format, // dest
+          SWS_FAST_BILINEAR, NULL, NULL, NULL);
         if (!swsContext_) {
           ROS_ERROR("cannot allocate sws context!!!!");
           ros::shutdown();
@@ -124,14 +131,16 @@ namespace ffmpeg_image_transport {
 
       // bend the memory pointers in colorFrame to the right locations 
       av_image_fill_arrays(colorFrame_->data,  colorFrame_->linesize,
-                           &(image->data[0]), (AVPixelFormat)colorFrame_->format,
+                           &(image->data[0]),
+                           (AVPixelFormat)colorFrame_->format,
                            colorFrame_->width, colorFrame_->height, 1);
       sws_scale(swsContext_,
                 decodedFrame_->data,  decodedFrame_->linesize, 0, // src
                 ctx->height, colorFrame_->data, colorFrame_->linesize); // dest
       auto it = ptsToStamp_.find(decodedFrame_->pts);
       if (it == ptsToStamp_.end()) {
-        ROS_ERROR_STREAM("cannot find pts that matches " << decodedFrame_->pts);
+        ROS_ERROR_STREAM("cannot find pts that matches "
+                         << decodedFrame_->pts);
       } else {
         image->header = msg->header;
         image->header.stamp = it->second;
@@ -140,7 +149,20 @@ namespace ffmpeg_image_transport {
       }
     }
     av_packet_unref(&packet);
+    if (measurePerformance_) {
+      ros::WallTime t1 = ros::WallTime::now();
+      double dt = (t1-t0).toSec();
+      tdiffTotal_.update(dt);
+    }
     return (true);
+  }
+
+  void FFMPEGDecoder::resetTimers() {
+    tdiffTotal_.reset();
+  }
+
+  void FFMPEGDecoder::printTimers(const std::string &prefix) const {
+    ROS_INFO_STREAM(prefix << " total decode: " << tdiffTotal_);
   }
  
 }  // namespace

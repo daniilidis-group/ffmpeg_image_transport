@@ -33,22 +33,33 @@ namespace ffmpeg_image_transport {
 
   class FFMPEGDecoder {
   public:
+    typedef boost::function<void(const ImageConstPtr &img)> Callback;
     FFMPEGDecoder();
     ~FFMPEGDecoder();
     bool isInitialized() const { return (codecContext_ != NULL); }
     // Initialize decoder upon first packet received,
     // providing callback to be called when frame is complete.
     // You must still call decodePacket(msg) afterward!
-    bool initialize(const FFMPEGPacket::ConstPtr& msg,
-                    boost::function<void(const ImageConstPtr &img)> callback);
+    bool initialize(const FFMPEGPacket::ConstPtr& msg, Callback callback);
     // clears all state, but leaves config intact
     void reset();
     // decode packet (may result in frame callback!)
     bool decodePacket(const FFMPEGPacket::ConstPtr &msg);
+    void setMeasurePerformance(bool p) {
+      measurePerformance_ = p;
+    }
+    void printTimers(const std::string &prefix) const;
+    void resetTimers();
+
   private:
     bool initDecoder(int width, int height, const std::string &codecName);
     // --------- variables
-    boost::function<void(const ImageConstPtr &img)> callback_;
+    Callback          callback_;
+    // mapping of header
+    PTSMap            ptsToStamp_;
+    // performance analysis
+    bool              measurePerformance_{false};
+    TDiff             tdiffTotal_;
     // libav stuff
     std::string       encoding_;
     AVCodecContext   *codecContext_{NULL};
@@ -57,10 +68,5 @@ namespace ffmpeg_image_transport {
     SwsContext       *swsContext_{NULL};
     std::unordered_map<std::string, std::string> codecMap_;
     AVPacket          packet_;
-    // mapping of header
-    PTSMap            ptsToStamp_;
-    // performance analysis
-    unsigned int      frameCnt_{0};
-    TDiff             tdiffTotal_;
   };
 }
