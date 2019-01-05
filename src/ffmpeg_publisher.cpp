@@ -55,7 +55,7 @@ namespace ffmpeg_image_transport {
     encoder_.setBitRate(config.bit_rate);
     encoder_.setGOPSize(config.gop_size);
     encoder_.setMeasurePerformance(config.measure_performance);
-    ROS_INFO_STREAM(" setting codec: " << config.encoder <<
+    ROS_DEBUG_STREAM("FFMPEGPublisher codec: " << config.encoder <<
                     ", profile: " << config.profile <<
                     ", preset: " << config.preset <<
                     ", bit rate: " << config.bit_rate <<
@@ -96,12 +96,16 @@ namespace ffmpeg_image_transport {
     }
   }
   
-  void FFMPEGPublisher::connectCallback(const ros::SingleSubscriberPublisher &pub) {
-    ROS_INFO_STREAM("connect: got number of subscribers: " << getNumSubscribers());
+  void FFMPEGPublisher::connectCallback(
+    const ros::SingleSubscriberPublisher &pub) {
+    ROS_DEBUG_STREAM("FFMPEGPublisher: connect() now has subscribers: "
+                     << getNumSubscribers());
     initConfigServer();
   }
 
-  void FFMPEGPublisher::disconnectCallback(const ros::SingleSubscriberPublisher &pub) {
-    ROS_INFO_STREAM("disconnect: got number of subscribers: " << getNumSubscribers());
+  void FFMPEGPublisher::disconnectCallback(
+    const ros::SingleSubscriberPublisher &pub) {
+    ROS_DEBUG_STREAM("FFMPEGPublisher: disconnect() subscribers left: "
+                     << getNumSubscribers());
   }
 }

@@ -29,7 +29,8 @@ namespace ffmpeg_image_transport {
                                         const Callback& user_cb) {
     if (!decoder_.isInitialized()) {
       userCallback_ = &user_cb;
-      if (!decoder_.initialize(msg, boost::bind(&FFMPEGSubscriber::frameReady, this, ::_1))) {
+      if (!decoder_.initialize(msg, boost::bind(&FFMPEGSubscriber::frameReady,
+                                                this, ::_1))) {
         ROS_ERROR_STREAM("cannot initialize decoder!");
         return;
       }

@@ -73,7 +73,7 @@ namespace ffmpeg_image_transport {
         throw (std::runtime_error("cannot allocate codec context!"));
       }
       codecContext_->bit_rate  = bitRate_;
-      codecContext_->qmax      = qmax_;    // 0: highest quality, 63: worst quality bound
+      codecContext_->qmax      = qmax_;// 0: highest, 63: worst quality bound
       codecContext_->width     = width;
       codecContext_->height    = height;
       codecContext_->time_base = AVRational{1,    fps_};
@@ -82,7 +82,8 @@ namespace ffmpeg_image_transport {
       // gop size is number of frames between keyframes
       // small gop -> higher bandwidth, lower cpu consumption
       codecContext_->gop_size = GOPSize_;
-      // number of bidirectional frames (per group?). NVenc can only handle zero!
+      // number of bidirectional frames (per group?).
+      // NVenc can only handle zero!
       codecContext_->max_b_frames = 0;
    
       // encoded pixel format. Must be supported by encoder
@@ -90,24 +91,29 @@ namespace ffmpeg_image_transport {
 
       codecContext_->pix_fmt = pixFormat_;
 
-      if (av_opt_set(codecContext_->priv_data, "profile", profile_.c_str(), AV_OPT_SEARCH_CHILDREN) != 0) {
+      if (av_opt_set(codecContext_->priv_data, "profile", profile_.c_str(),
+                     AV_OPT_SEARCH_CHILDREN) != 0) {
         ROS_ERROR_STREAM("cannot set profile: " << profile_);
       }
 
-      if (av_opt_set(codecContext_->priv_data, "preset", preset_.c_str(),  AV_OPT_SEARCH_CHILDREN) != 0) {
+      if (av_opt_set(codecContext_->priv_data, "preset", preset_.c_str(),
+                     AV_OPT_SEARCH_CHILDREN) != 0) {
         ROS_ERROR_STREAM("cannot set preset: " << preset_);
       }
-      ROS_INFO("codec: %10s, profile: %10s, preset: %10s, bit_rate: %10ld qmax: %2d",
-               codecName_.c_str(), profile_.c_str(), preset_.c_str(), bitRate_, qmax_);
+      ROS_DEBUG("codec: %10s, profile: %10s, preset: %10s,"
+                " bit_rate: %10ld qmax: %2d",
+                codecName_.c_str(), profile_.c_str(),
+                preset_.c_str(), bitRate_, qmax_);
       /* other optimization options for nvenc
-         if (av_opt_set_int(codecContext_->priv_data, "surfaces",  0, AV_OPT_SEARCH_CHILDREN) != 0) {
+         if (av_opt_set_int(codecContext_->priv_data, "surfaces",
+         0, AV_OPT_SEARCH_CHILDREN) != 0) {
          ROS_ERROR_STREAM("cannot set surfaces!");
          }
       */
       if (avcodec_open2(codecContext_, codec, NULL) < 0)  {
         throw (std::runtime_error("cannot open codec!"));
       }
-      ROS_INFO_STREAM("opened codec: " << codecName_);
+      ROS_DEBUG_STREAM("opened codec: " << codecName_);
       frame_ = av_frame_alloc();
       if (!frame_)  {
         throw (std::runtime_error("cannot alloc frame!"));
@@ -116,7 +122,8 @@ namespace ffmpeg_image_transport {
       frame_->height = height;
       frame_->format = codecContext_->pix_fmt;
       // allocate image for frame
-      if (av_image_alloc(frame_->data, frame_->linesize, width, height, (AVPixelFormat)frame_->format, 32) < 0) {
+      if (av_image_alloc(frame_->data, frame_->linesize, width, height,
+                         (AVPixelFormat)frame_->format, 32) < 0) {
         throw (std::runtime_error("cannot alloc image!"));
       }
       //Initialize packet
@@ -135,8 +142,8 @@ namespace ffmpeg_image_transport {
       }
       return (false);
     }
-    ROS_INFO_STREAM("intialized codec " << codecName_ << " for image: "
-                    << width << "x" << height);
+    ROS_DEBUG_STREAM("intialized codec " << codecName_ << " for image: "
+                     << width << "x" << height);
     return (true);
 	}
 
@@ -177,7 +184,8 @@ namespace ffmpeg_image_transport {
       memcpy(frame_->data[1], p + width*height, width*height / 4);
       memcpy(frame_->data[2], p + width*(height + height/4), (width*height)/4);
     } else {
-      ROS_ERROR_STREAM("cannot convert format bgr8 -> "  << " -> " << codecContext_->pix_fmt);
+      ROS_ERROR_STREAM("cannot convert format bgr8 -> "
+                       << " -> " << codecContext_->pix_fmt);
       return;
     }
     if (measurePerformance_) {
@@ -215,10 +223,6 @@ namespace ffmpeg_image_transport {
       tdiffReceivePacket_.update((t1 - t0).toSec());
     }
     const AVPacket &pk = packet_;
-#if 0
-    ROS_INFO("frame: %lld, packet: size: %d, flags: %d, pts: %lld, dts: %lld pos: %lld",
-             frame_->pts, pk.size, pk.flags, pk.pts, pk.dts, pk.pos);
-#endif    
     if (ret == 0 && packet_.size > 0) {
       FFMPEGPacket *packet = new FFMPEGPacket;
       FFMPEGPacketConstPtr pptr(packet);
