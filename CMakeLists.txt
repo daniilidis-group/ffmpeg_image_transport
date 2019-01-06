@@ -4,7 +4,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -g -Wall")
 
 find_package(catkin REQUIRED COMPONENTS roscpp cv_bridge image_transport ffmpeg_image_transport_msgs sensor_msgs dynamic_reconfigure)
 
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 find_package(FFMPEG REQUIRED)
 
 generate_dynamic_reconfigure_options(cfg/EncoderDynConfig.cfg)
