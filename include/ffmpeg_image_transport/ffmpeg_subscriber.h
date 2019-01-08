@@ -7,7 +7,7 @@
 #include "ffmpeg_image_transport/ffmpeg_decoder.h"
 #include <image_transport/simple_subscriber_plugin.h>
 #include <sensor_msgs/Image.h>
-
+#include <string>
 
 namespace ffmpeg_image_transport {
   using Image         = sensor_msgs::Image;
@@ -34,6 +34,7 @@ namespace ffmpeg_image_transport {
   private:
     void frameReady(const ImageConstPtr &img) const;
     FFMPEGDecoder decoder_;
+    std::string   decoderType_;
     const Callback *userCallback_;
   };
 }

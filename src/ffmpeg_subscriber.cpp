@@ -18,6 +18,7 @@ namespace ffmpeg_image_transport {
     const ros::VoidPtr &tracked_object,
     const image_transport::TransportHints &transport_hints) {
     // bump queue size a bit to avoid lost packets
+    nh.param<std::string>("decoder_type", decoderType_, "");
     queue_size = std::max((int)queue_size, 20);
     FFMPEGSubscriberPlugin::subscribeImpl(nh, base_topic,
                                           queue_size, callback,
@@ -29,8 +30,9 @@ namespace ffmpeg_image_transport {
                                         const Callback& user_cb) {
     if (!decoder_.isInitialized()) {
       userCallback_ = &user_cb;
-      if (!decoder_.initialize(msg, boost::bind(&FFMPEGSubscriber::frameReady,
-                                                this, ::_1))) {
+      if (!decoder_.initialize(
+            msg, boost::bind(&FFMPEGSubscriber::frameReady, this, ::_1),
+            decoderType_)) {
         ROS_ERROR_STREAM("cannot initialize decoder!");
         return;
       }

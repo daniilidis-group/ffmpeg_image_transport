@@ -40,15 +40,20 @@ namespace ffmpeg_image_transport {
   }
 
   bool FFMPEGDecoder::initialize(const FFMPEGPacket::ConstPtr& msg,
-                                 Callback callback) {
+                                 Callback callback, const std::string &codecName) {
     callback_ = callback;
-    const auto it = codecMap_.find(msg->encoding);
-    if (it == codecMap_.end()) {
-      ROS_ERROR_STREAM("unknown encoding: " << msg->encoding);
-      return (false);
+    std::string codec = codecName;
+    if (codec.empty()) {
+      // try and find the right codec from the map
+      const auto it = codecMap_.find(msg->encoding);
+      if (it == codecMap_.end()) {
+        ROS_ERROR_STREAM("unknown encoding: " << msg->encoding);
+        return (false);
+      }
+      codec = it->second;
     }
     encoding_ = msg->encoding;
-    return (initDecoder(msg->img_width, msg->img_height, it->second));
+    return (initDecoder(msg->img_width, msg->img_height, codec));
   }
 
 	bool FFMPEGDecoder::initDecoder(int width, int height,

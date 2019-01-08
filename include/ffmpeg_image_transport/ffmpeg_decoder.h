@@ -40,7 +40,8 @@ namespace ffmpeg_image_transport {
     // Initialize decoder upon first packet received,
     // providing callback to be called when frame is complete.
     // You must still call decodePacket(msg) afterward!
-    bool initialize(const FFMPEGPacket::ConstPtr& msg, Callback callback);
+    bool initialize(const FFMPEGPacket::ConstPtr& msg, Callback callback,
+                    const std::string &codec=std::string());
     // clears all state, but leaves config intact
     void reset();
     // decode packet (may result in frame callback!)
