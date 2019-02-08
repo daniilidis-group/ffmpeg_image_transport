@@ -76,8 +76,8 @@ namespace ffmpeg_image_transport {
       codecContext_->qmax      = qmax_;// 0: highest, 63: worst quality bound
       codecContext_->width     = width;
       codecContext_->height    = height;
-      codecContext_->time_base = AVRational{1,    fps_};
-      codecContext_->framerate = AVRational{fps_, 1};
+      codecContext_->time_base = timeBase_;
+      codecContext_->framerate = frameRate_;
 
       // gop size is number of frames between keyframes
       // small gop -> higher bandwidth, lower cpu consumption

@@ -68,6 +68,13 @@ namespace ffmpeg_image_transport {
       Lock lock(mutex_);
       GOPSize_ = g;
     }
+    void setFrameRate(int frames, int second) {
+      Lock lock(mutex_);
+      frameRate_.num = frames;
+      frameRate_.den = second;
+      timeBase_.num  = second;
+      timeBase_.den  = frames;
+    }
     void setMeasurePerformance(bool p) {
       Lock lock(mutex_);
       measurePerformance_ = p;
@@ -99,7 +106,8 @@ namespace ffmpeg_image_transport {
     std::string       preset_;
     std::string       profile_;
     AVPixelFormat     pixFormat_{AV_PIX_FMT_YUV420P};
-    int               fps_{30};
+    AVRational        timeBase_{1, 40};
+    AVRational        frameRate_{40, 1};
     int               GOPSize_{15};
     int64_t           bitRate_{1000000};
     int               qmax_{0};
