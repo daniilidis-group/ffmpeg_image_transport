@@ -7,7 +7,7 @@ find_package(catkin REQUIRED COMPONENTS roscpp cv_bridge image_transport ffmpeg_
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 find_package(FFMPEG REQUIRED)
 
-generate_dynamic_reconfigure_options(cfg/EncoderDynConfig.cfg)
+generate_dynamic_reconfigure_options(cfg/EncoderDyn.cfg)
 
 catkin_package(
 INCLUDE_DIRS include
