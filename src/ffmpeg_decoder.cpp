@@ -150,7 +150,7 @@ namespace ffmpeg_image_transport {
         image->header = msg->header;
         image->header.stamp = it->second;
         ptsToStamp_.erase(it);
-        callback_(image); // deliver callback
+        callback_(image, decodedFrame_->key_frame == 1); // deliver callback
       }
     }
     av_packet_unref(&packet);

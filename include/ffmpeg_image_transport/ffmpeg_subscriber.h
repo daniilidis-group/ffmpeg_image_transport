@@ -25,14 +25,17 @@ namespace ffmpeg_image_transport {
     }
 
   protected:
-    virtual void internalCallback(const typename FFMPEGPacket::ConstPtr& message,
-                                  const Callback& user_cb) override;
-    virtual void subscribeImpl(ros::NodeHandle &nh, const std::string &base_topic,
-                               uint32_t queue_size, const Callback &callback,
-                               const ros::VoidPtr &tracked_object,
-                               const image_transport::TransportHints &transport_hints) override;
+    virtual void
+    internalCallback(const typename FFMPEGPacket::ConstPtr& message,
+                     const Callback& user_cb) override;
+    virtual void
+    subscribeImpl(ros::NodeHandle &nh, const std::string &base_topic,
+                  uint32_t queue_size, const Callback &callback,
+                  const ros::VoidPtr &tracked_object,
+                  const image_transport::TransportHints &transport_hints)
+      override;
   private:
-    void frameReady(const ImageConstPtr &img) const;
+    void frameReady(const ImageConstPtr &img, bool isKeyFrame) const;
     FFMPEGDecoder decoder_;
     std::string   decoderType_;
     const Callback *userCallback_;

@@ -33,7 +33,8 @@ namespace ffmpeg_image_transport {
 
   class FFMPEGDecoder {
   public:
-    typedef boost::function<void(const ImageConstPtr &img)> Callback;
+    typedef boost::function<void(const ImageConstPtr &img,
+                                 bool isKeyFrame)> Callback;
     FFMPEGDecoder();
     ~FFMPEGDecoder();
     bool isInitialized() const { return (codecContext_ != NULL); }

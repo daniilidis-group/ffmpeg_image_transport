@@ -230,6 +230,7 @@ namespace ffmpeg_image_transport {
       packet->img_width =  width; 
       packet->img_height = height;
       packet->pts        = pk.pts;
+      packet->flags      = pk.flags;
       memcpy(&(packet->data[0]), packet_.data, packet_.size);
       if (measurePerformance_) {
         t2 = ros::WallTime::now();
