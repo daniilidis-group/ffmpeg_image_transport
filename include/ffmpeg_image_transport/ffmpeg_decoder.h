@@ -33,7 +33,8 @@ namespace ffmpeg_image_transport {
 
   class FFMPEGDecoder {
   public:
-    typedef boost::function<void(const ImageConstPtr &img)> Callback;
+    typedef boost::function<void(const ImageConstPtr &img,
+                                 bool isKeyFrame)> Callback;
     FFMPEGDecoder();
     ~FFMPEGDecoder();
     bool isInitialized() const { return (codecContext_ != NULL); }
@@ -42,6 +43,7 @@ namespace ffmpeg_image_transport {
     // You must still call decodePacket(msg) afterward!
     bool initialize(const FFMPEGPacket::ConstPtr& msg, Callback callback,
                     const std::string &codec=std::string());
+
     // clears all state, but leaves config intact
     void reset();
     // decode packet (may result in frame callback!)
@@ -53,7 +55,9 @@ namespace ffmpeg_image_transport {
     void resetTimers();
 
   private:
-    bool initDecoder(int width, int height, const std::string &codecName);
+    bool initDecoder(int width, int height,
+                     const std::string &codecName,
+                     const std::vector<std::string> &codec);
     // --------- variables
     Callback          callback_;
     // mapping of header
@@ -67,7 +71,7 @@ namespace ffmpeg_image_transport {
     AVFrame          *decodedFrame_{NULL};
     AVFrame          *colorFrame_{NULL};
     SwsContext       *swsContext_{NULL};
-    std::unordered_map<std::string, std::string> codecMap_;
+    std::unordered_map<std::string, std::vector<std::string>> codecMap_;
     AVPacket          packet_;
   };
 }

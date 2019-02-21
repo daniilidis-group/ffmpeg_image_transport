@@ -13,10 +13,9 @@
 namespace ffmpeg_image_transport {
 
   FFMPEGDecoder::FFMPEGDecoder() {
-    codecMap_["h264_nvenc"] = "h264";
-    codecMap_["libx264"]    = "h264";
-    //codecMap_["hevc_nvenc"] = "hevc";
-    codecMap_["hevc_nvenc"] = "hevc_cuvid";
+    codecMap_["h264_nvenc"] = {"h264"};
+    codecMap_["libx264"]    = {"h264"};
+    codecMap_["hevc_nvenc"] = {"hevc_cuvid", "hevc"};
   }
 
   FFMPEGDecoder::~FFMPEGDecoder() {
@@ -42,37 +41,54 @@ namespace ffmpeg_image_transport {
   bool FFMPEGDecoder::initialize(const FFMPEGPacket::ConstPtr& msg,
                                  Callback callback, const std::string &codecName) {
     callback_ = callback;
-    std::string codec = codecName;
-    if (codec.empty()) {
+    std::string cname = codecName;
+    std::vector<std::string> codecs;
+    if (cname.empty()) {
       // try and find the right codec from the map
       const auto it = codecMap_.find(msg->encoding);
       if (it == codecMap_.end()) {
         ROS_ERROR_STREAM("unknown encoding: " << msg->encoding);
         return (false);
       }
-      codec = it->second;
+      cname  = msg->encoding;
+      codecs = it->second;
+    } else {
+      codecs.push_back(codecName);
     }
     encoding_ = msg->encoding;
-    return (initDecoder(msg->img_width, msg->img_height, codec));
+    return (initDecoder(msg->img_width, msg->img_height, cname, codecs));
   }
 
 	bool FFMPEGDecoder::initDecoder(int width, int height,
-                                  const std::string &codecName) {
+                                  const std::string &codecName,
+                                  const std::vector<std::string> &codecs) {
     try {
-      const AVCodec *codec = avcodec_find_decoder_by_name(codecName.c_str());
-      if (!codec) {
-        throw (std::runtime_error("unknown codec: " + codecName));
+      const AVCodec *codec = NULL;
+      for (const auto &c: codecs) {
+        codec = avcodec_find_decoder_by_name(c.c_str());
+        if (!codec) {
+          ROS_WARN_STREAM("no codec " << c << " found!");
+          continue;
+        }
+        codecContext_ = avcodec_alloc_context3(codec);
+        if (!codecContext_) {
+          ROS_WARN_STREAM("alloc context failed for " + codecName);
+          codec = NULL;
+          continue;
+        }
+        codecContext_->width  = width;
+        codecContext_->height = height;
+        if (avcodec_open2(codecContext_, codec, NULL) < 0) {
+          ROS_WARN_STREAM("open context failed for " + codecName);
+          av_free(codecContext_);
+          codecContext_ = NULL;
+          codec = NULL;
+          continue;
+        }
       }
-      codecContext_ = avcodec_alloc_context3(codec);
-      if (!codecContext_) {
-        throw (std::runtime_error("alloc context failed for " + codecName));
-      }
-      codecContext_->width  = width;
-      codecContext_->height = height;
-      if (avcodec_open2(codecContext_, codec, NULL) < 0) {
-        throw (std::runtime_error("cannot open context for " + codecName));
-      }
-
+      if (!codec)
+        throw (std::runtime_error("cannot open codec " + codecName));
+      
       decodedFrame_       = av_frame_alloc();
       colorFrame_         = av_frame_alloc();
       colorFrame_->width  = width;
@@ -150,7 +166,7 @@ namespace ffmpeg_image_transport {
         image->header = msg->header;
         image->header.stamp = it->second;
         ptsToStamp_.erase(it);
-        callback_(image); // deliver callback
+        callback_(image, decodedFrame_->key_frame == 1); // deliver callback
       }
     }
     av_packet_unref(&packet);
