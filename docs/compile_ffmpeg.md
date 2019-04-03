@@ -34,13 +34,13 @@ Make your own ffmpeg directory:
 
 Build yasm:
 
-	cd $ffmpeg_dir
-	wget -O yasm-1.3.0.tar.gz https://www.tortall.net/projects/yasm/releases/yasm-1.3.0.tar.gz && \
-	tar xzvf yasm-1.3.0.tar.gz && \
-	cd yasm-1.3.0 && \
-	./configure --prefix="$ffmpeg_dir/build" --bindir="$ffmpeg_dir/bin" && \
-	make && \
-	make install
+    cd $ffmpeg_dir
+    wget -O yasm-1.3.0.tar.gz https://www.tortall.net/projects/yasm/releases/yasm-1.3.0.tar.gz && \
+    tar xzvf yasm-1.3.0.tar.gz && \
+    cd yasm-1.3.0 && \
+    ./configure --prefix="$ffmpeg_dir/build" --bindir="$ffmpeg_dir/bin" && \
+    make && \
+    make install
 
 Build nasm:
 
@@ -62,11 +62,22 @@ Get nvcodec headers:
     git clone https://git.videolan.org/git/ffmpeg/nv-codec-headers.git
     cd nv-codec-headers
 
+At this point you will have to pick the right version of the headers. You need the one that matches
+your driver. For instance:
+
+    git checkout n8.2.15.8
+
+will get you a version that works with with Linux 410.48 or newer (see README file). If you mess
+up here, you will later get an error that looks like this:
+
+    [hevc_nvenc @ 0x7fc67c03a580] Cannot load libnvidia-encode.so.1
+    [hevc_nvenc @ 0x7fc67c03a580] The minimum required Nvidia driver for nvenc is 418.30 or newer
+
 Now create a modified Makefile that points to the right location:
 
     tmp_var="${ffmpeg_dir//"/"/"\/"}"
     sed "s/\/usr\/local/${tmp_var}\/build/g" Makefile > Makefile.tmp
-	make -f Makefile.tmp install
+    make -f Makefile.tmp install
 
 
 # Compile FFMpeg
@@ -77,9 +88,8 @@ This builds an ffmpeg that has more components than you need
 
     cd $ffmpeg_dir
     git clone https://github.com/FFmpeg/FFmpeg.git	
-	cd $ffmpeg_dir/FFmpeg
-	PATH="$ffmpeg_dir/bin:$PATH" PKG_CONFIG_PATH="$ffmpeg_dir/build/lib/pkgconfig" ./configure --prefix=${ffmpeg_dir}/build --extra-cflags=-I${ffmpeg_dir}/build/include --extra-ldflags=-L${ffmpeg_dir}/build/lib --bindir=${ffmpeg_dir}/bin --enable-cuda-sdk --enable-cuvid --enable-libnpp --extra-cflags=-I/usr/local/cuda/include/ --extra-ldflags=-L/usr/local/cuda/lib64/ --enable-gpl --enable-libmp3lame --enable-libvpx 	--enable-nvenc --enable-libx264 --enable-libx265 --enable-nonfree --enable-shared
-
+    cd $ffmpeg_dir/FFmpeg
+    PATH="$ffmpeg_dir/bin:$PATH" PKG_CONFIG_PATH="$ffmpeg_dir/build/lib/pkgconfig" ./configure --prefix=${ffmpeg_dir}/build --extra-cflags=-I${ffmpeg_dir}/build/include --extra-ldflags=-L${ffmpeg_dir}/build/lib --bindir=${ffmpeg_dir}/bin --enable-cuda-nvcc --enable-cuvid --enable-libnpp --extra-cflags=-I/usr/local/cuda/include/ --extra-ldflags=-L/usr/local/cuda/lib64/ --enable-gpl --enable-nvenc --enable-libx264 --enable-libx265 --enable-nonfree --enable-shared
 
 Now build and install (runs for a few minutes!):
 
