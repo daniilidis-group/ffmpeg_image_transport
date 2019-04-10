@@ -26,18 +26,22 @@ If you don't have ffmpeg 4.0 or later,
 transport to the right place: 
 
     ffmpeg_dir=<here the ffmpeg_dir>
-    catkin bt -DFFMPEG_LIB=${ffmpeg_dir}/build/lib -DFFMPEG_INC=${ffmpeg_dir}/build/include
+    catkin config -DCMAKE_BUILD_TYPE=Release -DFFMPEG_LIB=${ffmpeg_dir}/build/lib -DFFMPEG_INC=${ffmpeg_dir}/build/include
 
 ## Compiling
 
 This should be easy as running the following inside your catkin workspace
 
     catkin config -DCMAKE_BUILD_TYPE=Release
-    catkin build ffmpeg_image_transport
-	
-Then compile:
 
-    cd ffmpeg_image_transport
+or, if you have your own version of ffmpeg installaed under ``${ffmpeg_dir`` (see above)
+
+    catkin config -DCMAKE_BUILD_TYPE=Release -DFFMPEG_LIB=${ffmpeg_dir}/build/lib -DFFMPEG_INC=${ffmpeg_dir}/build/include
+
+then compile should be as easy as this:
+
+    catkin build ffmpeg_image_transport
+
 
 ## Trouble shooting:
 
