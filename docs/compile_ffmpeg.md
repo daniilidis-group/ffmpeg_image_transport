@@ -25,7 +25,8 @@ Install ffmpeg build dependencies according to
     texinfo \
     wget \
     zlib1g-dev \
-    install libx264-dev
+	libx264-dev \
+	libx265-dev
 
 Make your own ffmpeg directory:
 
@@ -84,15 +85,21 @@ Now create a modified Makefile that points to the right location:
 
 Clone and configure ffmpeg to your needs. The following configuration gives you
 cuda and the hardware accelerated nvidia (nvenc) encoding for x264/x265.
-This builds an ffmpeg that has more components than you need
+This builds an ffmpeg that has more components than you need.
 
     cd $ffmpeg_dir
     git clone https://github.com/FFmpeg/FFmpeg.git	
     cd $ffmpeg_dir/FFmpeg
+
+To build full NVidia encode/decode support, do this:
+
     PATH="$ffmpeg_dir/bin:$PATH" PKG_CONFIG_PATH="$ffmpeg_dir/build/lib/pkgconfig" ./configure --prefix=${ffmpeg_dir}/build --extra-cflags=-I${ffmpeg_dir}/build/include --extra-ldflags=-L${ffmpeg_dir}/build/lib --bindir=${ffmpeg_dir}/bin --enable-cuda-nvcc --enable-cuvid --enable-libnpp --extra-cflags=-I/usr/local/cuda/include/ --extra-ldflags=-L/usr/local/cuda/lib64/ --enable-gpl --enable-nvenc --enable-libx264 --enable-libx265 --enable-nonfree --enable-shared
 
-Now build and install (runs for a few minutes!):
+If you don't have an NVidia card, do this:
 
+    PATH="$ffmpeg_dir/bin:$PATH" PKG_CONFIG_PATH="$ffmpeg_dir/build/lib/pkgconfig" ./configure --prefix=${ffmpeg_dir}/build --extra-cflags=-I${ffmpeg_dir}/build/include --extra-ldflags=-L${ffmpeg_dir}/build/lib --bindir=${ffmpeg_dir}/bin --enable-gpl --enable-libx264 --enable-libx265 --enable-nonfree --enable-shared
+
+Now build and install (runs for a few minutes!):
 
     PATH="$ffmpeg_dir/bin:${PATH}:/usr/local/cuda/bin" make && make install && hash -r
 
