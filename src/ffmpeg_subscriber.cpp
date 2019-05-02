@@ -30,6 +30,9 @@ namespace ffmpeg_image_transport {
   void FFMPEGSubscriber::internalCallback(const FFMPEGPacket::ConstPtr& msg,
                                         const Callback& user_cb) {
     if (!decoder_.isInitialized()) {
+      if (msg->flags == 0) {
+        return; // wait for key frame!
+      }
       userCallback_ = &user_cb;
       if (!decoder_.initialize(
             msg, boost::bind(&FFMPEGSubscriber::frameReady, this, ::_1, ::_2),
