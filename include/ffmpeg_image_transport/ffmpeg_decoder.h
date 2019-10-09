@@ -69,9 +69,12 @@ namespace ffmpeg_image_transport {
     std::string       encoding_;
     AVCodecContext   *codecContext_{NULL};
     AVFrame          *decodedFrame_{NULL};
+    AVFrame          *cpuFrame_{NULL};
     AVFrame          *colorFrame_{NULL};
     SwsContext       *swsContext_{NULL};
     std::unordered_map<std::string, std::vector<std::string>> codecMap_;
-    AVPacket          packet_;
+    enum AVPixelFormat hwPixFormat_;
+    AVPacket           packet_;
+    AVBufferRef        *hwDeviceContext_{NULL};
   };
 }

@@ -9,6 +9,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <fstream>
 #include <iomanip>
+#include <unordered_map>
 
 namespace ffmpeg_image_transport {
 
@@ -32,14 +33,20 @@ namespace ffmpeg_image_transport {
       sws_freeContext(swsContext_);
       swsContext_ = NULL;
     }
+    if (hwDeviceContext_) {
+      av_buffer_unref(&hwDeviceContext_);
+    }
     av_free(decodedFrame_);
     decodedFrame_ = NULL;
+    av_free(cpuFrame_);
+    cpuFrame_ = NULL;
     av_free(colorFrame_);
     colorFrame_ = NULL;
   }
 
   bool FFMPEGDecoder::initialize(const FFMPEGPacket::ConstPtr& msg,
-                                 Callback callback, const std::string &codecName) {
+                                 Callback callback,
+                                 const std::string &codecName) {
     callback_ = callback;
     std::string cname = codecName;
     std::vector<std::string> codecs;
@@ -59,6 +66,63 @@ namespace ffmpeg_image_transport {
     return (initDecoder(msg->img_width, msg->img_height, cname, codecs));
   }
 
+  static enum AVHWDeviceType get_hw_type(const std::string &name) {
+    enum AVHWDeviceType type = av_hwdevice_find_type_by_name(name.c_str());
+    if (type == AV_HWDEVICE_TYPE_NONE) {
+      ROS_WARN_STREAM("hw accel device is not supported: " << name);
+      ROS_INFO_STREAM("available devices:");
+      while((type = av_hwdevice_iterate_types(type)) != AV_HWDEVICE_TYPE_NONE)
+        ROS_INFO_STREAM(av_hwdevice_get_type_name(type));
+      return (type);
+    }
+    return (type);
+  }
+
+  static AVBufferRef *hw_decoder_init(AVBufferRef **hwDeviceContext,
+                                      const enum AVHWDeviceType hwType) {
+    int rc = av_hwdevice_ctx_create(hwDeviceContext, hwType, NULL, NULL, 0);
+    if (rc < 0) {
+      ROS_ERROR_STREAM("failed to create context for HW device: " << hwType);
+      return (NULL);
+    }
+    return (av_buffer_ref(*hwDeviceContext));
+  }
+
+  static std::unordered_map<AVCodecContext *, AVPixelFormat> pix_format_map;
+  
+  static enum AVPixelFormat
+  get_hw_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts) {
+    enum AVPixelFormat pf = pix_format_map[ctx];
+    const enum AVPixelFormat *p;
+    for (p = pix_fmts; *p != -1; p++) {
+      if (*p == pf) {
+        //ROS_INFO_STREAM("found hw pix format: " << pf);
+        return *p;
+      }
+    }
+    ROS_ERROR_STREAM("Failed to get HW surface format.");
+    return AV_PIX_FMT_NONE;
+  }
+
+  static enum AVPixelFormat find_pix_format(
+    const std::string &codecName, enum AVHWDeviceType hwDevType,
+    const AVCodec *codec, const std::string &hwAcc) {
+
+    for (int i = 0; ; i++) {
+      const AVCodecHWConfig *config = avcodec_get_hw_config(codec, i);
+      if (!config) {
+        ROS_WARN_STREAM("decoder " << codecName <<
+                        " does not support hw accel: " << hwAcc);
+        return (AV_PIX_FMT_NONE);
+      }
+      if (config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX &&
+          config->device_type == hwDevType) {
+        return (config->pix_fmt);
+      }
+    }
+    return (AV_PIX_FMT_NONE);
+  }
+                                                  
 	bool FFMPEGDecoder::initDecoder(int width, int height,
                                   const std::string &codecName,
                                   const std::vector<std::string> &codecs) {
@@ -76,8 +140,18 @@ namespace ffmpeg_image_transport {
           codec = NULL;
           continue;
         }
+        const std::string hwAcc("cuda");
+        enum AVHWDeviceType hwDevType = get_hw_type(hwAcc);
+        av_opt_set_int(codecContext_, "refcounted_frames", 1, 0);  
+        codecContext_->hw_device_ctx = hw_decoder_init(&hwDeviceContext_,
+                                                       hwDevType);
+        hwPixFormat_ = find_pix_format(codecName, hwDevType, codec, hwAcc);
         codecContext_->width  = width;
         codecContext_->height = height;
+        // must put in global hash for the callback function
+        pix_format_map[codecContext_] = hwPixFormat_;
+        codecContext_->get_format = get_hw_format;
+
         if (avcodec_open2(codecContext_, codec, NULL) < 0) {
           ROS_WARN_STREAM("open context failed for " + codecName);
           av_free(codecContext_);
@@ -90,6 +164,7 @@ namespace ffmpeg_image_transport {
         throw (std::runtime_error("cannot open codec " + codecName));
       
       decodedFrame_       = av_frame_alloc();
+      cpuFrame_  = (hwPixFormat_ == AV_PIX_FMT_NONE) ? NULL : av_frame_alloc();
       colorFrame_         = av_frame_alloc();
       colorFrame_->width  = width;
       colorFrame_->height = height;
@@ -129,11 +204,22 @@ namespace ffmpeg_image_transport {
       return (false);
     }
     ret = avcodec_receive_frame(ctx, decodedFrame_);
-    if (ret == 0 && decodedFrame_->width != 0) {
+    const bool isAcc = (ret == 0) && (decodedFrame_->format == hwPixFormat_);
+    if (isAcc) {
+      ret = av_hwframe_transfer_data(cpuFrame_, decodedFrame_, 0);
+      if (ret < 0) {
+        ROS_WARN_STREAM("failed to transfer data from GPU->CPU");
+        av_packet_unref(&packet);
+        return  (false);
+      }
+    }
+    AVFrame *frame = isAcc ? cpuFrame_ : decodedFrame_;
+        
+    if (ret == 0 && frame->width != 0) {
       // convert image to something palatable
       if (!swsContext_) {
         swsContext_ = sws_getContext(
-          ctx->width, ctx->height, (AVPixelFormat)decodedFrame_->format, //src
+          ctx->width, ctx->height, (AVPixelFormat)frame->format, //src
           ctx->width, ctx->height, (AVPixelFormat)colorFrame_->format, // dest
           SWS_FAST_BILINEAR, NULL, NULL, NULL);
         if (!swsContext_) {
@@ -144,8 +230,8 @@ namespace ffmpeg_image_transport {
       }
       // prepare the decoded message
       ImagePtr image(new sensor_msgs::Image());
-      image->height = decodedFrame_->height;
-      image->width  = decodedFrame_->width;
+      image->height = frame->height;
+      image->width  = frame->width;
       image->step   = image->width * 3; // 3 bytes per pixel
       image->encoding = sensor_msgs::image_encodings::BGR8;
       image->data.resize(image->step * image->height);
@@ -156,7 +242,7 @@ namespace ffmpeg_image_transport {
                            (AVPixelFormat)colorFrame_->format,
                            colorFrame_->width, colorFrame_->height, 1);
       sws_scale(swsContext_,
-                decodedFrame_->data,  decodedFrame_->linesize, 0, // src
+                frame->data,  frame->linesize, 0, // src
                 ctx->height, colorFrame_->data, colorFrame_->linesize); // dest
       auto it = ptsToStamp_.find(decodedFrame_->pts);
       if (it == ptsToStamp_.end()) {
