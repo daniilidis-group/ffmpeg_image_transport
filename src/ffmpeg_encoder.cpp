@@ -62,9 +62,9 @@ namespace ffmpeg_image_transport {
       if (codecName_.empty()) {
         throw (std::runtime_error("no codec set!"));
       }
-      if ((width % 16) != 0) {
+      if ((width % 32) != 0) {
         throw (std::runtime_error("image line width must be "
-                                  "multiple of 16 but is: " + std::to_string(width)));
+                                  "multiple of 32 but is: " + std::to_string(width)));
       }
       // find codec
       AVCodec *codec = avcodec_find_encoder_by_name(codecName_.c_str());

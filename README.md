@@ -33,7 +33,8 @@ Note that not all resolutions are supported in hardware accelerated
 mode for h264 encoding/decoding, so you may get strange results if you
 have cameras with resolutions other than those supported by
 e.g. nvenc. Plain 1920x1200 works, probably also VGA, but other
-resolutions need to be verified.
+resolutions need to be verified. Experiments indicate that the line
+width must be a multiple of 32!
 
 ## Compiling
 
