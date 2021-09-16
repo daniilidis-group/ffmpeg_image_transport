@@ -62,6 +62,10 @@ namespace ffmpeg_image_transport {
       if (codecName_.empty()) {
         throw (std::runtime_error("no codec set!"));
       }
+      if ((width % 16) != 0) {
+        throw (std::runtime_error("image line width must be "
+                                  "multiple of 16 but is: " + std::to_string(width)));
+      }
       // find codec
       AVCodec *codec = avcodec_find_encoder_by_name(codecName_.c_str());
       if (!codec) {
@@ -185,7 +189,7 @@ namespace ffmpeg_image_transport {
       memcpy(frame_->data[2], p + width*(height + height/4), (width*height)/4);
     } else {
       ROS_ERROR_STREAM("cannot convert format bgr8 -> "
-                       << " -> " << codecContext_->pix_fmt);
+                       << (int)codecContext_->pix_fmt);
       return;
     }
     if (measurePerformance_) {
