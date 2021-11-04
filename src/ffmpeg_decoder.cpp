@@ -54,7 +54,7 @@ namespace ffmpeg_image_transport {
       // try and find the right codec from the map
       const auto it = codecMap_.find(msg->encoding);
       if (it == codecMap_.end()) {
-        ROS_ERROR_STREAM("unknown encoding: " << msg->encoding);
+        ROS_ERROR_STREAM("message has unknown encoding: " << msg->encoding);
         return (false);
       }
       cname  = msg->encoding;
@@ -123,9 +123,10 @@ namespace ffmpeg_image_transport {
     return (AV_PIX_FMT_NONE);
   }
                                                   
-	bool FFMPEGDecoder::initDecoder(int width, int height,
+  bool FFMPEGDecoder::initDecoder(int width, int height,
                                   const std::string &codecName,
                                   const std::vector<std::string> &codecs) {
+    std::string codecUsed = "NO_CODEC_FOUND";
     try {
       const AVCodec *codec = NULL;
       for (const auto &c: codecs) {
@@ -140,17 +141,22 @@ namespace ffmpeg_image_transport {
           codec = NULL;
           continue;
         }
+        av_opt_set_int(codecContext_, "refcounted_frames", 1, 0);  
         const std::string hwAcc("cuda");
         enum AVHWDeviceType hwDevType = get_hw_type(hwAcc);
-        av_opt_set_int(codecContext_, "refcounted_frames", 1, 0);  
-        codecContext_->hw_device_ctx = hw_decoder_init(&hwDeviceContext_,
-                                                       hwDevType);
-        hwPixFormat_ = find_pix_format(codecName, hwDevType, codec, hwAcc);
+
+        if (hwDevType != AV_HWDEVICE_TYPE_NONE) {
+          codecContext_->hw_device_ctx = hw_decoder_init(&hwDeviceContext_,
+                                                         hwDevType);
+          hwPixFormat_ = find_pix_format(codecName, hwDevType, codec, hwAcc);
+          // must put in global hash for the callback function
+          pix_format_map[codecContext_] = hwPixFormat_;
+          codecContext_->get_format = get_hw_format;
+        } else {
+          hwPixFormat_ = AV_PIX_FMT_NONE;
+        }
         codecContext_->width  = width;
         codecContext_->height = height;
-        // must put in global hash for the callback function
-        pix_format_map[codecContext_] = hwPixFormat_;
-        codecContext_->get_format = get_hw_format;
 
         if (avcodec_open2(codecContext_, codec, NULL) < 0) {
           ROS_WARN_STREAM("open context failed for " + codecName);
@@ -159,6 +165,8 @@ namespace ffmpeg_image_transport {
           codec = NULL;
           continue;
         }
+        codecUsed = c;
+        break;
       }
       if (!codec)
         throw (std::runtime_error("cannot open codec " + codecName));
@@ -176,7 +184,12 @@ namespace ffmpeg_image_transport {
       reset();
       return (false);
     }
-    ROS_INFO_STREAM("using decoder " << codecName);
+    if (codecName != codecUsed) {
+      ROS_INFO_STREAM("message encoded with " <<
+                      codecName << " decoded with " << codecUsed);
+    } else {
+      ROS_INFO_STREAM("decoding with " << codecUsed);
+    }
     return (true);
 	}
 

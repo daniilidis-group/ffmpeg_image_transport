@@ -4,6 +4,8 @@ This ROS image transport supports encoding/decoding with the FFMpeg
 library. With this transport, you can encode h264 and h265, using
 nvidia hardware acceleration when available.
 
+Also have a look at [this repo tools to help with decoding](https://github.com/daniilidis-group/ffmpeg_image_transport_tools).
+
 ## Downloading
 
 Create a catkin workspace (if not already there) and download the
@@ -14,10 +16,21 @@ ffmpeg image transport and other required packages:
     git clone https://github.com/daniilidis-group/ffmpeg_image_transport_msgs.git
     git clone https://github.com/daniilidis-group/ffmpeg_image_transport.git
 
+Optionally get the additional set of ffmpeg tools:
+
+    git clone git@github.com:daniilidis-group/ffmpeg_image_transport_tools.git
+
 
 ## Requirements: FFmpeg v4.0 or later, and a "reasonable" resolution
 
-If you have ffmpeg 4.0, you may be able to compile against default header files:
+At some point this software worked on the following systems:
+
+- Ubuntu 16.04 + ROS kinetic (not tested in a long while, maybe broken
+  by now)
+- Ubuntu 18.04 + ROS melodic
+- Ubuntu 20.04 + ROS noetic (recently tested, should work with stock ffmpeg)
+
+If you have ffmpeg 4.0 or later you may be able to compile against default header files:
 
 	sudo apt install ffmpeg
 
@@ -83,6 +96,52 @@ Details:
 If it says something about "plugins not built", that means the
 ``LD_LIBRARY_PATH`` is not set correctly.
 
+### republishing
+Most ROS nodes that publish images use an image transport for that. If
+not you can use a republish node to convert images into an ffmpeg
+stream. The following line will start a republish node in ffmpeg format:
+
+```
+rosrun image_transport republish raw in:=/webcam/image_raw ffmpeg out:=/webcam/image_raw/ffmpeg _/webcam/image_raw/ffmpeg/encoding:=x264
+```
+
+### encoder parameters
+
+The image transport has various parameters that you can configure
+dynamically via ``rqt_reconfigure``, or specify at startup by
+prepending the topic name. For instance to use the unaccelerated
+``libx264`` encoding, start a republish node like this:
+```
+rosrun image_transport republish raw in:=/webcam/image_raw ffmpeg __name:=repub out:=~/image_raw  _/image_raw/ffmpeg/encoder:=libx264
+```
+Note: I had to ``__name`` the node to get the ros parameter show up under the topic name.
+
+Parameters (see ffmpeg h264 documentation for explanation):
+
+- ``encoder``: ffmpeg encoding to use. Allowed values: ``h265_nvenc``,
+  ``hevc_nvenc``, ``libx264`` (no GPU). Default: ``hevc_nvenc``.
+- ``profile``: ffmpeg profile. Allowed values: ``main``, ``main10``,
+  ``rext``, ``high``. Default: ``main``.
+- ``qmax``: maximum allowed quantization, controls quality. Range 0-63, default: 10.
+- ``bit_rate``: bit rate in bits/sec. Range 10-2000000000, default: 8242880.
+- ``gop_size``: gop size (number of frames): Range 1-128, default: 15
+- ``measure_performance``: switch on performance debugging output. Default: false.
+- ``performance_interval``: number of frames between performance printouts. Default: 175.
+
+### encoder parameters
+
+Usually the decoder infers from the received encoding type what decoding scheme to use.
+You can overwrite it with a node-level parameter though:
+
+- ``decoder_type``:
+  - ``h264``: used if encoding is ``libx264`` or ``h264_nvenc``.
+  - ``hevc_cuvid``: first tried if encoding is ``hevc_nvenc``.
+  - ``hevc``: second tried if encoding is ``hevc_nvenc``.
+
+For example to force ``hevc`` decoding, run a node like this:
+```
+rosrun image_transport republish ffmpeg in:=/repub/image_raw raw out:=~/image_raw _/ffmpeg/decoder_type:=hevc
+```
 
 ## Trouble shooting:
 

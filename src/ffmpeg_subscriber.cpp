@@ -18,8 +18,9 @@ namespace ffmpeg_image_transport {
     uint32_t queue_size, const Callback &callback,
     const ros::VoidPtr &tracked_object,
     const image_transport::TransportHints &transport_hints) {
+    const std::string pname = ros::this_node::getName() + "/ffmpeg/decoder_type";
+    nh.param<std::string>(pname, decoderType_, "");
     // bump queue size a bit to avoid lost packets
-    nh.param<std::string>("decoder_type", decoderType_, "");
     queue_size = std::max((int)queue_size, 20);
     FFMPEGSubscriberPlugin::subscribeImpl(nh, base_topic,
                                           queue_size, callback,
