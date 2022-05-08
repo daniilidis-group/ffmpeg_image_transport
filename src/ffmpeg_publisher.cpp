@@ -71,7 +71,7 @@ namespace ffmpeg_image_transport {
       me->initConfigServer();
       me->publishFunction_ = &publish_fn;
       if (!me->encoder_.initialize(message.width, message.height,
-              boost::bind(&FFMPEGPublisher::packetReady, me, ::_1))) {
+              boost::bind(&FFMPEGPublisher::packetReady, me, boost::placeholders::_1))) {
         ROS_ERROR_STREAM("cannot initialize encoder!");
         return;
       }
@@ -92,7 +92,8 @@ namespace ffmpeg_image_transport {
     if (!configServer_) {
       configServer_.reset(new ConfigServer(*nh_));
       // this will trigger an immediate callback!
-      configServer_->setCallback(boost::bind(&FFMPEGPublisher::configure, this, _1, _2));
+      configServer_->setCallback(boost::bind(&FFMPEGPublisher::configure, this,
+            boost::placeholders::_1, boost::placeholders::_2));
     }
   }
   
