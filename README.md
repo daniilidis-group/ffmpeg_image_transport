@@ -157,3 +157,7 @@ you need a newer version of ffmpeg:
 If the build still fails, make sure you start from scratch:
 
     catkin clean ffmpeg_image_transport
+
+## License
+
+This software is issued under the Apache License Version 2.0.
