@@ -1,5 +1,9 @@
 # ROS image transport for FFmpeg encoding
 
+
+NOTE: This repo has reached End-Of-Life. All future development will
+be on the [ROS2 repository here](https://github.com/berndpfrommer/ffmpeg_image_transport/).
+
 This ROS image transport supports encoding/decoding with the FFMpeg
 library. With this transport, you can encode h264 and h265, using
 nvidia hardware acceleration when available.
